@@ -1,25 +1,71 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Peer Assessment 1"
+author: "Henrique De Saboia"
+date: "February 13, 2015"
+output: html_document
 ---
+Peer Assessment 1
+========================================
 
+## Load And Process The Data
+```{r loaddata}
+setwd("/Users/hdesaboi/SkyDrive/Data Science Specialization/5. Reproduceable Research/Week 2/Peer Assessment 1/")
+activity <- read.csv("activity.csv")
+activity$date <- as.Date(activity$date)
 
-## Loading and preprocessing the data
+```
 
+What is mean total number of steps taken per day?
 
+```{r, echo=TRUE}
+totals <- aggregate(steps ~ date, data=activity, sum)
+hist(totals$steps, col = "red", main = "Mean Total Number of Steps Taken per Day", xlab = "Number of Steps")
+mean(totals$steps)
+median(totals$steps)
+```
 
-## What is mean total number of steps taken per day?
+What is the average daily activity pattern?
 
+````{r, echo=TRUE}
+dailyTotals <- aggregate(steps ~ interval, data = activity, mean)
+with(dailyTotals, plot(interval, steps,xlab = "5 Minute Intervals ", ylab = "Average Steps",type = "n", main = "Average Daily Activity Pattern"))
+lines(dailyTotals$interval, dailyTotals$steps, lwd=1, col = "red")
+with(dailyTotals,interval[which.max(steps)])
+````
 
+Imputing missing values
+````{r}
+sum(is.na(activity$steps))
+sum(is.na(activity$date))
+sum(is.na(activity$interval))
+````
+Strategy - Replace NA values with average activity for that 5 minute interval
+````{r}
+colnames(dailyTotals) <- c("interval", "stepsDailyAvg")
+newActivity <- merge(activity, dailyTotals, by.y = "interval")
+newActivity$steps[is.na(newActivity$steps)] <- newActivity$stepsDailyAvg[is.na(newActivity$steps)]
 
-## What is the average daily activity pattern?
+newTotals <- aggregate(steps ~ date, data=newActivity, sum)
+hist(newTotals$steps, col = "red", main = "Mean Total Number of Steps Taken per Day", xlab = "Number of Steps")
+mean(newTotals$steps)
+median(newTotals$steps)
+````
+Are there differences in activity patterns between weekdays and weekends?
+````{r}
+newTotals$weekday <- weekdays(newTotals$date, abbreviate = TRUE)
+library(lubridate)
+newActivity$weekday <- wday(newActivity$date)
+newActivity$weekday[newActivity$weekday == 1 | newActivity$weekday == 7] <- c("weekend")
+newActivity$weekday[newActivity$weekday == 2 |newActivity$weekday == 3 |newActivity$weekday == 4 |newActivity$weekday == 5 |newActivity$weekday == 6 ] <- c("weekday")
+weekActivity <- subset(newActivity, weekday == "weekday")
+weekendActivity<- subset(newActivity, weekday == "weekend")
+weekendTotals <- aggregate(steps ~ interval, data=weekendActivity, mean)
+weekTotals <- aggregate(steps ~ interval, data=weekActivity, mean)
 
+par(mfrow = c(2, 1))
+with(weekendTotals, plot(interval, steps,xlab = "5 Minute Intervals ", ylab = "Average Steps",type = "n", main = "Average Daily Activity Pattern - Weekend"))
+lines(weekendTotals$interval, weekendTotals$steps, lwd=1, col = "red")
 
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+with(weekTotals, plot(interval, steps,xlab = "5 Minute Intervals ", ylab = "Average Steps",type = "n", main = "Average Daily Activity Pattern - Weekday"))
+lines(weekTotals$interval, weekTotals$steps, lwd=1, col = "red")
+````
